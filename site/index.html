@@ -1,0 +1,724 @@
+<title>Учет услуг НКО</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Расширение для 1С:Бухгалтерия предприятия и 1С:Бухгалтерия некоммерческой организации: учет услуг, программ реабилитации, расписания, часов специалистов и волонтеров, оплаты занятий. Запрос лицензионного ключа.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: журнал учета — слева тезис, справа живой документ 1С; ниже разделы как вкладки карточки благополучателя */
+:root{
+  --paper:#F3F6F5; --sheet:#FFFFFF; --ink:#14221E; --muted:#56655F; --line:#D5DEDA;
+  --green:#1E6E52; --green-soft:#E1EEE8; --mark:#F2B632; --mark-ink:#3A2A00; --bad:#B4372B;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",Consolas,ui-monospace,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0F1715; --sheet:#16211E; --ink:#E6EEEA; --muted:#97A8A1; --line:#2A3833;
+  --green:#5BC49A; --green-soft:#1C3229; --mark:#F2B632; --mark-ink:#2A1E00; --bad:#F08A7E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0F1715; --sheet:#16211E; --ink:#E6EEEA; --muted:#97A8A1; --line:#2A3833;
+  --green:#5BC49A; --green-soft:#1C3229; --mark:#F2B632; --mark-ink:#2A1E00; --bad:#F08A7E; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:400 17px/1.6 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h2{font-size:clamp(26px,3.4vw,38px);font-weight:700;letter-spacing:-.01em}
+h3{font-size:17px;font-weight:500}
+p{margin:0}
+a{color:var(--green)}
+.eyebrow{font:500 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--green)}
+.lead{color:var(--muted);max-width:62ch}
+section{padding-block:72px;border-top:1px solid var(--line)}
+.sec-head{display:grid;gap:14px;margin-bottom:40px;max-width:760px}
+
+/* nav */
+nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font:700 15px/1 var(--f-display);color:var(--ink);text-decoration:none}
+.logo i{width:28px;height:28px;border-radius:50%;background:var(--green);display:grid;place-items:center;color:var(--sheet);font:700 12px var(--f-mono);font-style:normal}
+nav ul{display:flex;gap:22px;list-style:none;margin:0;padding:0;flex-wrap:wrap;align-items:center}
+nav ul a{color:var(--muted);text-decoration:none;font-size:15px}
+nav ul a:hover{color:var(--ink)}
+nav ul a.key{color:var(--green);border:1.5px solid var(--green);padding:7px 14px;border-radius:var(--r);font-weight:600}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;padding-block:40px 24px}
+.hero>*{min-width:0}
+.hero h1{font-size:clamp(38px,5.6vw,66px);font-weight:700;letter-spacing:-.025em;margin-block:18px 22px}
+.hero h1 em{font-style:normal;background:linear-gradient(transparent 62%,var(--mark) 62% 92%,transparent 92%)}
+.hero .lead{font-size:19px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 22px;border-radius:var(--r);font:600 16px/1 var(--f-body);text-decoration:none;border:1.5px solid var(--green);cursor:pointer;background:none}
+.btn.primary{background:var(--green);color:var(--sheet)}
+.btn.ghost{color:var(--green)}
+.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.meta{display:flex;gap:28px;margin-top:36px;flex-wrap:wrap;font:400 13px/1.4 var(--f-mono);color:var(--muted)}
+.meta b{display:block;color:var(--ink);font-weight:500;font-size:15px}
+
+/* 1C document mock */
+.doc{background:var(--sheet);border:1px solid var(--line);border-radius:10px;box-shadow:0 30px 60px -30px rgba(20,34,30,.35);overflow:hidden;font-size:14px;margin:0}
+.doc-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--green-soft)}
+.doc-bar b{font-weight:600}
+.doc-bar span{font:400 11px var(--f-mono);color:var(--muted)}
+.doc-body{padding:16px;display:grid;gap:14px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.fields dt{color:var(--muted)}
+.fields dd{margin:0;border-bottom:1px dashed var(--line);min-width:0}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tabs span{padding:6px 10px;font-size:12.5px;border:1px solid var(--line);border-bottom:none;border-radius:5px 5px 0 0;color:var(--muted)}
+.tabs span.on{background:var(--paper);color:var(--ink);font-weight:600}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--paper)}
+td.n{text-align:right;font-family:var(--f-mono)}
+.pill{display:inline-block;font:500 11px var(--f-mono);padding:2px 7px;border-radius:20px;background:var(--green-soft);color:var(--green)}
+.pill.warn{background:var(--mark);color:var(--mark-ink)}
+.note{font:400 11px var(--f-mono);color:var(--muted);text-align:right;padding-bottom:48px;margin-top:10px}
+
+/* new in 3.5 */
+.news{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.news>div{background:var(--sheet);padding:24px;display:grid;gap:10px;align-content:start}
+.news .kind{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.news p{font-size:15px;color:var(--muted)}
+.news .big{grid-column:span 2;background:var(--green-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font:400 12px var(--f-mono);padding:3px 8px;border-radius:4px;background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+
+/* screenshots */
+.shots{display:grid;gap:16px}
+.shot-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.shot-tabs button{font:500 15px var(--f-body);color:var(--muted);background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:9px 14px;cursor:pointer}
+.shot-tabs button.on{color:var(--sheet);background:var(--green);border-color:var(--green)}
+.shot-tabs button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.shot{margin:0;display:grid;gap:10px}
+.shot img{display:block;width:100%;height:auto;max-width:100%;border:1px solid var(--line);border-radius:10px;box-shadow:0 24px 50px -30px rgba(20,34,30,.35)}
+.shot figcaption{color:var(--muted);font-size:15px;max-width:70ch}
+
+/* objects grid */
+.objects{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.obj{background:var(--sheet);padding:22px;display:grid;gap:10px;align-content:start}
+.obj .kind{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.obj h3{font-size:16px}
+.obj p{font-size:15px;color:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;counter-reset:s}
+.flow li{counter-increment:s;display:grid;gap:10px;align-content:start;padding-top:18px;border-top:3px solid var(--green)}
+.flow li::before{content:"Шаг " counter(s);font:500 12px var(--f-mono);color:var(--green);letter-spacing:.06em}
+.flow p{color:var(--muted);font-size:15px}
+
+/* reports */
+.reports{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.reports>*{min-width:0}
+.rlist{list-style:none;margin:0;padding:0}
+.rlist li{display:grid;grid-template-columns:1fr auto;gap:16px;padding:13px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.rlist li span{font:400 12px var(--f-mono);color:var(--muted);text-align:right}
+.rlist li .pill{margin-left:8px}
+.print{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:26px;display:grid;gap:18px;align-content:start}
+.print .form{display:grid;gap:6px;padding:16px;border:1px dashed var(--line);border-radius:var(--r)}
+.print .form b{font-family:var(--f-display);font-weight:500;font-size:16px}
+.print .form p{color:var(--muted);font-size:15px}
+
+/* editions */
+.eds{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.ed p{color:var(--muted);font-size:15px}
+.price{font:700 34px/1 var(--f-display);color:var(--ink);letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.price small{font:400 14px var(--f-body);color:var(--muted);letter-spacing:0}
+.pnotes{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
+.grants{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center;margin-top:28px;padding:28px;border-radius:12px;background:var(--green-soft);border:1px solid var(--line)}
+.grants>*{min-width:0}
+.grants>div{display:grid;gap:10px}
+.grants h3{font-size:20px;font-weight:500}
+.grants p{color:var(--muted);font-size:15px}
+.funds{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.funds li{background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-weight:600;font-size:15px}
+@media (max-width:900px){.grants{grid-template-columns:1fr;padding:20px}}
+.pnotes p{color:var(--muted);font-size:15px}
+.pnotes b{color:var(--ink);font-weight:600}
+@media (max-width:900px){.pnotes{grid-template-columns:1fr}}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+@media (max-width:560px){.seg.three{grid-template-columns:1fr}}
+.ed{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:26px;display:grid;gap:14px;align-content:start}
+.ed.hi{border:2px solid var(--green)}
+.ed h3{font-size:22px;font-weight:700}
+.ed .code{font:500 12px var(--f-mono);color:var(--muted)}
+.ed ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ed li{padding-left:22px;position:relative;font-size:15px}
+.ed li::before{content:"";position:absolute;left:2px;top:.55em;width:10px;height:6px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg)}
+.ed li.off{color:var(--muted)}
+.ed li.off::before{border:none;width:10px;height:2px;background:var(--muted);top:.75em;transform:none}
+.terms{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:40px}
+.terms div{display:grid;gap:6px;align-content:start;padding-top:14px;border-top:1px solid var(--line)}
+.terms b{font-family:var(--f-display);font-weight:500;font-size:22px}
+.terms p{color:var(--muted);font-size:14.5px}
+
+/* license request */
+.lic{display:grid;grid-template-columns:.85fr 1.15fr;gap:48px;align-items:start}
+.lic>*{min-width:0}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:22px;counter-reset:k}
+.steps li{counter-increment:k;display:grid;grid-template-columns:36px 1fr;gap:14px}
+.steps li>div{min-width:0}
+.steps li::before{content:counter(k);width:32px;height:32px;border-radius:50%;border:1.5px solid var(--green);color:var(--green);display:grid;place-items:center;font:500 14px var(--f-mono)}
+.steps b{display:block;margin-bottom:2px}
+.steps p{color:var(--muted);font-size:15px}
+.path{font:500 13px var(--f-mono);background:var(--green-soft);color:var(--ink);padding:2px 6px;border-radius:4px}
+.keyfmt{font:400 13px var(--f-mono);background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;overflow-x:auto;white-space:nowrap;color:var(--muted)}
+form.req{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:28px;display:grid;gap:18px}
+.f{display:grid;gap:6px;min-width:0}
+.f label,.f legend{font-weight:600;font-size:15px}
+.f small{color:var(--muted);font-size:13px}
+.f input,.f textarea,.f select{font:400 16px var(--f-body);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px;width:100%}
+.f textarea{font:400 13.5px/1.5 var(--f-mono);resize:vertical;min-height:110px}
+.f input.inn{font-family:var(--f-mono);letter-spacing:.04em}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+fieldset.f{border:none;padding:0;margin:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;font-weight:400;background:var(--paper)}
+.seg label:has(input:checked){border-color:var(--green);background:var(--green-soft)}
+.seg input{margin-top:4px;accent-color:var(--green)}
+.seg b{display:block;font-size:15px}
+.seg span{font-size:13px;color:var(--muted)}
+.innlist{display:grid;gap:8px}
+.innrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.innrow .st{font:500 12px var(--f-mono);min-width:92px;text-align:right}
+.st.ok{color:var(--green)} .st.err{color:var(--bad)}
+.linkbtn{background:none;border:none;color:var(--green);font:600 14px var(--f-body);padding:4px 0;cursor:pointer;justify-self:start}
+.parsed{font:400 13px var(--f-mono);color:var(--green)}
+.err-msg{color:var(--bad);font-size:14px}
+.out{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:18px}
+.out pre{margin:0;font:400 13px/1.55 var(--f-mono);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px;white-space:pre-wrap;word-break:break-word}
+.out .send{font-size:15px;color:var(--muted)}
+.out .send b{color:var(--ink)}
+
+/* tech */
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 40px;margin:0}
+.spec div{display:grid;grid-template-columns:1fr auto;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.spec dt{color:var(--muted)}
+.spec dd{margin:0;font-family:var(--f-mono);font-size:15px;text-align:right}
+
+/* contact */
+.contact{background:var(--green);color:var(--sheet);border-radius:14px;padding:48px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center}
+.contact>*{min-width:0}
+.contact h2{color:var(--sheet)}
+.contact .lead{color:var(--sheet);opacity:.85;margin-top:14px}
+.ccard{background:var(--sheet);color:var(--ink);border-radius:10px;padding:24px;display:grid;gap:12px}
+.ccard .row{display:grid;gap:2px}
+.ccard .row span{font:400 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ccard{gap:16px}
+.ccard .f label{font-size:14px}
+.cdev{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid var(--line);padding-top:16px}
+.cdev .row:first-child{grid-column:1/-1}
+@media (max-width:560px){.cdev{grid-template-columns:1fr}}
+.clist{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:10px}
+.clist li{display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:baseline}
+.clist span{font:400 12px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--sheet);opacity:.75}
+.clist a{color:var(--sheet);font-weight:600;font-size:18px;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}
+.ph{background:var(--mark);color:var(--mark-ink);padding:1px 6px;border-radius:3px;font-size:15px}
+footer{padding-block:36px 48px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+
+@media (max-width:900px){
+  .hero,.reports,.contact,.lic{grid-template-columns:1fr}
+  .objects,.news{grid-template-columns:1fr 1fr}
+  .flow,.terms{grid-template-columns:1fr 1fr}
+  .eds{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .objects,.flow,.news,.terms,.row2,.seg{grid-template-columns:1fr}
+  .news .big,.obj.span2{grid-column:auto}
+  nav ul li:not(:last-child){display:none}
+  .contact{padding:28px 20px}
+  form.req{padding:20px}
+  section{padding-block:56px}
+}
+.obj.span2{grid-column:span 2}
+.obj.tint{background:var(--green-soft)}
+@media (max-width:560px){.obj.span2{grid-column:auto}}
+@media (prefers-reduced-motion:no-preference){
+  .doc{animation:rise .7s ease-out both}
+  @keyframes rise{from{transform:translateY(14px)}to{transform:none}}
+}
+</style>
+
+<div class="wrap">
+<nav>
+  <a class="logo" href="#top"><i>УН</i>Учет услуг НКО</a>
+  <ul>
+    <li><a href="#novoe">Что нового</a></li>
+    <li><a href="#ekrany">Скриншоты</a></li>
+    <li><a href="#vozmozhnosti">Возможности</a></li>
+    <li><a href="#licenziya">Стоимость</a></li>
+    <li><a href="#ustanovka">Установка</a></li>
+    <li><a class="key" href="#klyuch">Получить ключ</a></li>
+  </ul>
+</nav>
+
+<header class="hero" id="top">
+  <div>
+    <span class="eyebrow">Расширение для 1С:Бухгалтерии предприятия и НКО</span>
+    <h1>Каждое занятие и&nbsp;каждый час <em>в&nbsp;одной базе</em></h1>
+    <p class="lead">«Учет услуг НКО» добавляет в вашу бухгалтерскую базу благополучателей, программы реабилитации, расписание, занятия и мероприятия, часы специалистов и волонтеров, оплату педагогам. Отчет для гранта или фонда собирается из тех же данных.</p>
+    <div class="cta">
+      <a class="btn primary" href="#klyuch">Запросить лицензионный ключ</a>
+      <a class="btn ghost" href="#novoe">Что нового в 3.5</a>
+    </div>
+    <div class="meta">
+      <div><b>3.5.0.4</b>текущая версия</div>
+      <div><b>.cfe</b>типовая остается на поддержке</div>
+      <div><b>4 900 ₽</b>в год, пробный ключ бесплатно</div>
+    </div>
+  </div>
+
+  <figure class="doc" aria-label="Пример документа «Программа реабилитации»">
+    <div class="doc-bar"><b>Программа реабилитации 0000-000031 от 01.09.2026</b><span>Проведен</span></div>
+    <div class="doc-body">
+      <dl class="fields">
+        <dt>Благополучатель</dt><dd>Андреев Тимофей Викторович</dd>
+        <dt>Вид программы</dt><dd>Учебный год, 01.09.2026 – 31.05.2027</dd>
+        <dt>Куратор</dt><dd>Смирнова Е. А., дефектолог</dd>
+        <dt>Цель</dt><dd>Самостоятельность в быту и общении</dd>
+      </dl>
+      <div>
+        <div class="tabs"><span class="on">Задачи (4)</span><span>План занятий (3)</span><span>Диагностика</span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Задача</th><th>Было</th><th>Цель</th><th>Итог</th></tr></thead>
+          <tbody>
+            <tr><td>Одевается самостоятельно</td><td class="n">1</td><td class="n">3</td><td><span class="pill">достигнута</span></td></tr>
+            <tr><td>Просит о помощи жестом</td><td class="n">0</td><td class="n">2</td><td><span class="pill warn">динамика</span></td></tr>
+            <tr><td>Удерживает внимание 10 мин</td><td class="n">1</td><td class="n">2</td><td><span class="pill">достигнута</span></td></tr>
+            <tr><td>Ест ложкой</td><td class="n">2</td><td class="n">3</td><td><span class="pill warn">динамика</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </figure>
+</header>
+<p class="note">Данные в примере вымышлены</p>
+
+<section id="novoe">
+  <div class="sec-head">
+    <span class="eyebrow">Что нового в версии 3.5</span>
+    <h2>Из журнала услуг — в полноценную систему работы с семьями</h2>
+    <p class="lead">С версии 3.1 расширение выросло вдвое: появились программы реабилитации с диагностикой, расписание, тарифы и оплата, подробные карточки получателей и специалистов.</p>
+  </div>
+  <div class="news">
+    <div class="big">
+      <span class="kind">Документы</span>
+      <h3>Программа реабилитации и диагностика</h3>
+      <p>Программа на учебный год, заезд или курс: цель, задачи по доменам с исходной оценкой и целевым баллом, план занятий с педагогами и методиками. Первичная, промежуточная и итоговая диагностика фиксируют итог по каждой цели.</p>
+      <div class="chips"><span>цель достигнута</span><span>положительная динамика</span><span>не достигнута</span><span>задача снята</span><span>свои уровни оценки</span></div>
+    </div>
+    <div><span class="kind">Документ</span><h3>Расписание занятий</h3><p>Недельная сетка для каждого благополучателя: день, время, занятие и до трех педагогов, с периодом действия.</p></div>
+    <div><span class="kind">Документ</span><h3>Тарифы и стоимость</h3><p>Ставки педагогов за час, за занятие или за каждого участника. Стоимость занятия для конкретного благополучателя.</p></div>
+    <div><span class="kind">Отчеты</span><h3>Дневник и оплата</h3><p>Дневник занятий с темой и ходом занятия, расчет оплаты педагогам и оплаты занятий семьями.</p></div>
+    <div><span class="kind">Классификатор</span><h3>МКБ-10 в комплекте</h3><p>Диагнозы выбираются из встроенного классификатора, а не вводятся вручную.</p></div>
+  </div>
+</section>
+
+<section id="ekrany">
+  <div class="sec-head">
+    <span class="eyebrow">Как это выглядит</span>
+    <h2>Формы в привычном интерфейсе 1С</h2>
+    <p class="lead">Новые документы и отчеты открываются в той же программе, что и бухгалтерия. Данные на снимках вымышлены.</p>
+  </div>
+  <div class="shots">
+    <div class="shot-tabs" role="tablist">
+      <button type="button" role="tab" class="on" data-i="0" aria-selected="true">Программа: задачи</button>
+      <button type="button" role="tab" data-i="1" aria-selected="false">Программа: план занятий</button>
+      <button type="button" role="tab" data-i="2" aria-selected="false">Оплата педагогов за месяц</button>
+    </div>
+    <figure class="shot"><img src="img/program-zadachi.png" alt="Документ «Программа реабилитации», вкладка «Задачи»: домены, исходная и целевая оценка, ответственные" width="2438" height="1402" loading="lazy"><figcaption>Задачи программы по доменам: исходная оценка из первичной диагностики, цель и ответственный. Для каждой задачи указаны занятия, на которых она решается.</figcaption></figure>
+    <figure class="shot" hidden><img src="img/program-zanyatiya.png" alt="Документ «Программа реабилитации», вкладка «План занятий»: занятия, педагоги, количество в неделю и всего" width="2438" height="1522" loading="lazy"><figcaption>План занятий на срок программы: педагог, сколько занятий в неделю и всего, цель и методики.</figcaption></figure>
+    <figure class="shot" hidden><img src="img/oplata-pedagogov.png" alt="Отчет «Оплата педагогов» за октябрь: группировка по педагогам и типам занятий, тарифы и суммы" width="2438" height="1659" loading="lazy"><figcaption>Расчет оплаты за месяц: за час, за занятие или за каждого участника, по тарифам педагога или общему тарифу.</figcaption></figure>
+  </div>
+</section>
+
+<section id="vozmozhnosti">
+  <div class="sec-head">
+    <span class="eyebrow">Что учитывается</span>
+    <h2>Все, что обычно живет в журналах и таблицах</h2>
+    <p class="lead">Справочники, документы и отчеты встроены в программу отдельным разделом «Учет услуг НКО».</p>
+  </div>
+  <div class="objects">
+    <div class="obj span2 tint">
+      <span class="kind">Справочник</span>
+      <h3>Благополучатели</h3>
+      <p>Карточка со всем, что спрашивают фонды, соцзащита и проверяющие.</p>
+      <div class="chips"><span>СНИЛС</span><span>ИППСУ и срок</span><span>ИПРА</span><span>справки МСЭ</span><span>диагнозы МКБ-10</span><span>форма обслуживания</span><span>категория получателя</span><span>договор на соцуслуги</span><span>согласие на ПДн</span><span>согласие на съемку</span><span>законный представитель</span><span>плательщик</span><span>куратор</span><span>дата выбытия</span></div>
+    </div>
+    <div class="obj span2">
+      <span class="kind">Справочник</span>
+      <h3>Специалисты</h3>
+      <p>Связаны с сотрудниками бухгалтерии. Документы для проверок под рукой.</p>
+      <div class="chips"><span>образование и диплом</span><span>квалификационная категория</span><span>справка о несудимости</span><span>следующий медосмотр</span><span>повышение квалификации</span><span>оказываемые услуги</span></div>
+    </div>
+    <div class="obj"><span class="kind">Документ</span><h3>Оказание услуги</h3><p>Занятие, тема и ход, проект, благополучатели, специалисты и волонтеры с часами, родственники.</p></div>
+    <div class="obj"><span class="kind">Документ</span><h3>Проведение мероприятия</h3><p>Участники, организаторы, внешние специалисты и затраченные часы.</p></div>
+    <div class="obj"><span class="kind">Справочник</span><h3>Проекты</h3><p>Гранты и программы. Каждая услуга привязана к проекту, отчет фонду собирается по нему.</p></div>
+    <div class="obj"><span class="kind">Перечень</span><h3>Виды соцуслуг</h3><p>Социально-бытовые, медицинские, психологические, педагогические, трудовые, правовые и срочные.</p></div>
+  </div>
+</section>
+
+<section id="kak-rabotaet">
+  <div class="sec-head">
+    <span class="eyebrow">Как это работает</span>
+    <h2>От первичной диагностики до отчета фонду</h2>
+  </div>
+  <ol class="flow">
+    <li><h3>Принимаете на обслуживание</h3><p>Карточка благополучателя, документы, первичная диагностика и программа реабилитации с целями.</p></li>
+    <li><h3>Составляете расписание</h3><p>Недельная сетка занятий и педагогов, тарифы и стоимость для семьи.</p></li>
+    <li><h3>Отмечаете занятия</h3><p>После занятия один документ: кто был, кто проводил, сколько часов, о чем занимались.</p></li>
+    <li><h3>Подводите итоги</h3><p>Промежуточная и итоговая диагностика, отчеты по часам, оплате и услугам.</p></li>
+  </ol>
+</section>
+
+<section id="otchety">
+  <div class="sec-head">
+    <span class="eyebrow">Отчеты и печатные формы</span>
+    <h2>Цифры, которые просят фонды, в пару кликов</h2>
+  </div>
+  <div class="reports">
+    <ul class="rlist">
+      <li><div>Дневник занятий<span class="pill">новый</span></div><span>темы и ход занятий</span></li>
+      <li><div>Оплата педагогов<span class="pill">новый</span></div><span>по тарифам</span></li>
+      <li><div>Оплата занятий благополучателями<span class="pill">новый</span></div><span>расчеты с семьями</span></li>
+      <li><div>Услуги и мероприятия</div><span>по проектам и периодам</span></li>
+      <li><div>Услуги и мероприятия для благополучателей</div><span>по каждому человеку</span></li>
+      <li><div>Участие благополучателей в проектах</div><span>охват программ</span></li>
+      <li><div>Часы специалистов и волонтеров</div><span>нагрузка и вклад</span></li>
+      <li><div>Отчет по задачам</div><span>динамика оценок</span></li>
+    </ul>
+    <div class="print">
+      <span class="eyebrow">Печатная форма</span>
+      <div class="form"><b>Табель</b><p>Табель учета посещаемости и занятий за период.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="licenziya">
+  <div class="sec-head">
+    <span class="eyebrow">Лицензия и стоимость</span>
+    <h2>Годовая подписка, все возможности сразу</h2>
+    <p class="lead">Расширение поставляется целиком, без деления на редакции. Начните с бесплатного пробного ключа на 30 дней.</p>
+  </div>
+  <div class="eds">
+    <div class="ed hi">
+      <span class="code">своя база</span>
+      <h3>Лицензионный ключ</h3>
+      <div class="price">4 900 ₽<small>в год</small></div>
+      <p>Файловая или клиент-серверная база на вашем компьютере или сервере. Ключ действует 12 месяцев.</p>
+      <ul>
+        <li>Все функции расширения и обновления</li>
+        <li>Один ключ на базу, даже если в ней несколько организаций</li>
+        <li>Пробный ключ на 30 дней — бесплатно</li>
+      </ul>
+      <a class="btn primary" href="#klyuch" style="justify-self:start">Запросить ключ</a>
+    </div>
+    <div class="ed">
+      <span class="code">облако</span>
+      <h3>1С:Фреш</h3>
+      <div class="price">490 ₽<small>в месяц</small></div>
+      <p>Подключение и оплата средствами 1С:Фреш через Магазин расширений. Ключ вводить не нужно.</p>
+      <ul>
+        <li>Подписка оформляется в личном кабинете 1С:Фреш</li>
+        <li>Все функции доступны сразу после подключения</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grants">
+    <div>
+      <span class="eyebrow">Скидка грантополучателям</span>
+      <h3>Получили грант одного из этих фондов? Ключ обойдется дешевле</h3>
+      <p>Укажите фонд в заявке на ключ, размер скидки сообщим вместе со счетом.</p>
+    </div>
+    <ul class="funds">
+      <li>Благотворительный фонд Владимира Потанина</li>
+      <li>Фонд «Абсолют-Помощь»</li>
+      <li>Фонд Елены и Геннадия Тимченко</li>
+      <li>БФ «Помощь рядом»</li>
+    </ul>
+  </div>
+  <div class="pnotes">
+    <p><b>Оплата по счету</b>, после оплаты выдается акт. Стоимость можно включить в смету гранта.</p>
+    <p><b>Дополнительные модули</b> будут подключаться тем же ключом, без переустановки расширения.</p>
+  </div>
+  <div class="terms">
+    <div><b>1 ключ</b><p>На всю базу: все организации из нее входят в один ключ.</p></div>
+    <div><b>30 дней</b><p>Программа заранее напоминает об окончании лицензии.</p></div>
+    <div><b>+30 дней</b><p>Льготный период после окончания: работа не останавливается сразу.</p></div>
+    <div><b>Данные ваши</b><p>После окончания лицензии все введенное остается доступным для просмотра и отчетов.</p></div>
+  </div>
+</section>
+
+<section id="klyuch">
+  <div class="sec-head">
+    <span class="eyebrow">Запрос лицензионного ключа</span>
+    <h2>Получить или продлить ключ</h2>
+    <p class="lead">Заполните заявку. Проще всего вставить текст запроса из программы: организации и ИНН подставятся сами.</p>
+  </div>
+  <div class="lic">
+    <ol class="steps">
+      <li><div><b>Откройте форму лицензии в 1С</b><p><span class="path">Учет услуг НКО → Настройка → Лицензия Учет услуг НКО</span></p></div></li>
+      <li><div><b>Скопируйте текст запроса</b><p>В нем версия расширения и все организации базы с ИНН.</p></div></li>
+      <li><div><b>Заполните заявку и отправьте ее</b><p>Укажите, куда прислать ключ. Если база в 1С:Фреш, ключ не нужен.</p></div></li>
+      <li><div><b>Вставьте ключ и нажмите «Применить»</b><p>Ключ начинается с <span class="path">UNK1.</span> Для установки нужна роль «Администратор лицензии».</p>
+        <div class="keyfmt" style="margin-top:10px">UNK1.eyJ2IjoxLCJudW0iOiIyMDI2LTAwMDEi…​.3f9a…</div></div></li>
+    </ol>
+
+    <form class="req" id="req" novalidate>
+      <div class="f">
+        <label for="paste">Текст запроса из 1С</label>
+        <textarea id="paste" placeholder="Запрос лицензии «Учет услуг НКО»&#10;Версия расширения: 3.5.0.4&#10;Организации в базе:&#10;  РООРДИ «Пример», ИНН 4345000000"></textarea>
+        <small id="parsedInfo" class="parsed" aria-live="polite"></small>
+      </div>
+
+      <div class="row2">
+        <div class="f"><label for="org">Организация</label><input id="org" autocomplete="organization" placeholder="Полное наименование"></div>
+        <div class="f"><label for="ver">Версия расширения</label><input id="ver" placeholder="3.5.0.4" value="3.5.0.4"></div>
+      </div>
+
+      <div class="f">
+        <label>ИНН всех организаций базы</label>
+        <div class="innlist" id="innlist"></div>
+        <button type="button" class="linkbtn" id="addInn">+ Добавить ИНН</button>
+      </div>
+
+      <fieldset class="f">
+        <legend>Тип запроса</legend>
+        <div class="seg three">
+          <label><input type="radio" name="kind" id="k-trial" value="Пробный ключ на 30 дней" checked><div><b>Пробный</b><span>30 дней бесплатно</span></div></label>
+          <label><input type="radio" name="kind" id="k-new" value="Годовой ключ"><div><b>Годовой</b><span>4 900 ₽ в год</span></div></label>
+          <label><input type="radio" name="kind" id="k-ext" value="Продление"><div><b>Продление</b><span>на следующий год</span></div></label>
+        </div>
+      </fieldset>
+
+      <div class="f">
+        <label for="fund">Грант фонда</label>
+        <select id="fund">
+          <option value="">Нет гранта этих фондов</option>
+          <option>Благотворительный фонд Владимира Потанина</option>
+          <option>Фонд «Абсолют-Помощь»</option>
+          <option>Фонд Елены и Геннадия Тимченко</option>
+          <option>БФ «Помощь рядом»</option>
+        </select>
+        <small>Для скидки грантополучателям. Название проекта можно указать в комментарии.</small>
+      </div>
+
+      <div class="row2">
+        <div class="f"><label for="person">Контактное лицо</label><input id="person" autocomplete="name"></div>
+        <div class="f"><label for="contact">Почта или телефон для ключа</label><input id="contact" autocomplete="email"></div>
+      </div>
+
+      <div class="f"><label for="comment">Комментарий</label><input id="comment" placeholder="Например, номер текущей лицензии"></div>
+
+      <p class="err-msg" id="err" hidden></p>
+      <button type="submit" class="btn primary">Сформировать заявку</button>
+
+      <div class="out" id="out" hidden>
+        <pre id="outText"></pre>
+        <div class="cta" style="margin-top:0">
+          <button type="button" class="btn primary" id="copy">Скопировать заявку</button>
+        </div>
+        <p class="send">Отправьте заявку на почту <b><a href="mailto:470375@mail.ru">470375@mail.ru</a></b> или в Telegram <b><a href="https://t.me/SashaMoshkin" target="_blank" rel="noopener">@SashaMoshkin</a></b>. Пробный ключ придет в ответном письме, для годового сначала пришлем счет.</p>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section id="ustanovka">
+  <div class="sec-head">
+    <span class="eyebrow">Установка</span>
+    <h2>Подключается как расширение, обновлению базы не мешает</h2>
+    <p class="lead">Файл .cfe подключается в разделе «Администрирование → Печатные формы, отчеты и обработки → Расширения». Типовая конфигурация остается на поддержке и обновляется как обычно. В 1С:Фреш расширение подключается из Магазина расширений.</p>
+  </div>
+  <dl class="spec">
+    <div><dt>1С:Бухгалтерия предприятия</dt><dd>3.0</dd></div>
+    <div><dt>1С:Бухгалтерия НКО</dt><dd>3.0</dd></div>
+    <div><dt>Платформа</dt><dd>8.3.19 и выше</dd></div>
+    <div><dt>Версия расширения</dt><dd>3.5.0.4</dd></div>
+    <div><dt>Префикс объектов</dt><dd>УНК_</dd></div>
+    <div><dt>Облако</dt><dd>1С:Фреш</dd></div>
+    <div><dt>Назначение</dt><dd>дополнение</dd></div>
+  </dl>
+</section>
+
+<section id="kontakty" style="border-top:none">
+  <div class="contact">
+    <div>
+      <h2>Покажем на ваших данных</h2>
+      <p class="lead">Пришлем расширение, поможем установить и перенести справочники. Расскажите, сколько у вас благополучателей и проектов.</p>
+      <ul class="clist">
+        <li><span>Телефон</span><a href="tel:+79127270444">+7 912 727-04-44</a></li>
+        <li><span>Почта</span><a href="mailto:470375@mail.ru">470375@mail.ru</a></li>
+        <li><span>Telegram</span><a href="https://t.me/SashaMoshkin" target="_blank" rel="noopener">@SashaMoshkin</a></li>
+      </ul>
+    </div>
+    <form class="ccard" id="ask" novalidate>
+      <div class="f">
+        <label for="q-text">Ваш вопрос или запрос</label>
+        <textarea id="q-text" placeholder="Например: нужна демо-версия для Бухгалтерии НКО, у нас 40 благополучателей и 3 проекта"></textarea>
+      </div>
+      <div class="row2">
+        <div class="f"><label for="q-name">Имя и организация</label><input id="q-name" autocomplete="organization"></div>
+        <div class="f"><label for="q-contact">Почта или телефон</label><input id="q-contact" autocomplete="email"></div>
+      </div>
+      <p class="err-msg" id="q-err" hidden></p>
+      <button type="submit" class="btn primary" style="justify-self:start">Сформировать сообщение</button>
+      <div class="out" id="q-out" hidden>
+        <pre id="q-outText"></pre>
+        <button type="button" class="btn primary" id="q-copy" style="justify-self:start">Скопировать</button>
+        <p class="send">Отправьте сообщение на почту <b><a href="mailto:470375@mail.ru">470375@mail.ru</a></b> или в Telegram <b><a href="https://t.me/SashaMoshkin" target="_blank" rel="noopener">@SashaMoshkin</a></b>.</p>
+      </div>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <span>© ИП Мошкин А. С. Разработано для РООРДИ «Дорогою добра» Кировской области.</span>
+  <span>1С — товарный знак фирмы «1С».</span>
+</footer>
+</div>
+
+<script>
+(function(){
+  // Переключение снимков форм
+  var tabs = document.querySelectorAll('.shot-tabs button');
+  var shots = document.querySelectorAll('.shot');
+  Array.prototype.forEach.call(tabs, function(t){
+    t.addEventListener('click', function(){
+      var i = +t.getAttribute('data-i');
+      Array.prototype.forEach.call(tabs, function(b, k){ b.classList.toggle('on', k===i); b.setAttribute('aria-selected', k===i); });
+      Array.prototype.forEach.call(shots, function(s, k){ s.hidden = k!==i; });
+    });
+  });
+
+  var list = document.getElementById('innlist');
+  var n = 0;
+
+  // Проверка контрольной суммы ИНН (10 цифр — юрлицо, 12 — ИП)
+  function innValid(v){
+    if(!/^\d{10}$|^\d{12}$/.test(v)) return false;
+    var d = v.split('').map(Number);
+    function cs(w){ var s=0; for(var i=0;i<w.length;i++) s+=w[i]*d[i]; return s%11%10; }
+    if(d.length===10) return cs([2,4,10,3,5,9,4,6,8])===d[9];
+    return cs([7,2,4,10,3,5,9,4,6,8])===d[10] && cs([3,7,2,4,10,3,5,9,4,6,8])===d[11];
+  }
+
+  function check(inp, st){
+    var v = inp.value.replace(/\s/g,'');
+    if(!v){ st.textContent=''; st.className='st'; return; }
+    if(innValid(v)){ st.textContent = v.length===10 ? '✓ юрлицо' : '✓ ИП'; st.className='st ok'; }
+    else { st.textContent='неверный ИНН'; st.className='st err'; }
+  }
+
+  function addInn(val){
+    n++;
+    var row = document.createElement('div'); row.className='innrow';
+    var inp = document.createElement('input'); inp.className='inn'; inp.id='inn-'+n;
+    inp.inputMode='numeric'; inp.maxLength=12; inp.placeholder='10 или 12 цифр';
+    inp.setAttribute('aria-label','ИНН '+n);
+    var st = document.createElement('span'); st.className='st';
+    inp.addEventListener('input', function(){ check(inp, st); });
+    row.appendChild(inp); row.appendChild(st); list.appendChild(row);
+    if(val){ inp.value=val; check(inp, st); }
+    return inp;
+  }
+  addInn();
+  document.getElementById('addInn').addEventListener('click', function(){ addInn().focus(); });
+
+  // Разбор текста запроса из формы 1С
+  var paste = document.getElementById('paste');
+  var info = document.getElementById('parsedInfo');
+  paste.addEventListener('input', function(){
+    var t = paste.value;
+    var ver = t.match(/Версия расширения:\s*([\d.]+)/);
+    if(ver) document.getElementById('ver').value = ver[1];
+    var re = /^\s*(.+?),\s*ИНН\s*(\d{10,12})\s*$/gm, m, orgs=[];
+    while((m = re.exec(t))) orgs.push({name:m[1].trim(), inn:m[2]});
+    if(orgs.length){
+      list.innerHTML=''; n=0;
+      orgs.forEach(function(o){ addInn(o.inn); });
+      var org = document.getElementById('org');
+      if(!org.value) org.value = orgs[0].name;
+      info.textContent = 'Найдено организаций: ' + orgs.length + (ver ? ', версия ' + ver[1] : '');
+    } else {
+      info.textContent = t.trim() ? 'Организации с ИНН в тексте не найдены, заполните поля вручную' : '';
+    }
+  });
+
+  var form = document.getElementById('req');
+  var err = document.getElementById('err');
+  var out = document.getElementById('out');
+  var outText = document.getElementById('outText');
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var org = document.getElementById('org').value.trim();
+    var inns = Array.prototype.map.call(list.querySelectorAll('input'), function(i){ return i.value.replace(/\s/g,''); }).filter(Boolean);
+    var bad = inns.filter(function(v){ return !innValid(v); });
+    var contact = document.getElementById('contact').value.trim();
+    var problems = [];
+    if(!org) problems.push('укажите организацию');
+    if(!inns.length) problems.push('добавьте хотя бы один ИНН');
+    if(bad.length) problems.push('проверьте ИНН ' + bad.join(', '));
+    if(!contact) problems.push('укажите почту или телефон для ключа');
+    if(problems.length){
+      err.textContent = 'Чтобы сформировать заявку, ' + problems.join('; ') + '.';
+      err.hidden = false; out.hidden = true; return;
+    }
+    err.hidden = true;
+    var kind = form.querySelector('input[name=kind]:checked').value;
+    var lines = [
+      'Заявка на лицензию «Учет услуг НКО»',
+      'Тип: ' + kind,
+      'Версия расширения: ' + (document.getElementById('ver').value.trim() || 'не указана'),
+      'Организация: ' + org,
+      'ИНН: ' + inns.join(', '),
+      'Контактное лицо: ' + (document.getElementById('person').value.trim() || '—'),
+      'Куда прислать ключ: ' + contact
+    ];
+    var fund = document.getElementById('fund').value;
+    if(fund) lines.push('Грант фонда: ' + fund);
+    var c = document.getElementById('comment').value.trim();
+    if(c) lines.push('Комментарий: ' + c);
+    if(paste.value.trim()) lines.push('', '--- Текст запроса из 1С ---', paste.value.trim());
+    outText.textContent = lines.join('\n');
+    out.hidden = false;
+    out.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+
+  function copyFrom(btn, pre){
+    function selectIt(){
+      var r = document.createRange(); r.selectNodeContents(pre);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Текст выделен, нажмите Ctrl+C';
+    }
+    try{
+      navigator.clipboard.writeText(pre.textContent).then(function(){ btn.textContent='Скопировано'; }, selectIt);
+    }catch(e){ selectIt(); }
+  }
+  document.getElementById('copy').addEventListener('click', function(){ copyFrom(this, outText); });
+
+  // Форма вопроса в конце страницы
+  document.getElementById('ask').addEventListener('submit', function(e){
+    e.preventDefault();
+    var q = document.getElementById('q-text').value.trim();
+    var name = document.getElementById('q-name').value.trim();
+    var c = document.getElementById('q-contact').value.trim();
+    var qerr = document.getElementById('q-err');
+    var p = [];
+    if(!q) p.push('напишите вопрос');
+    if(!c) p.push('укажите почту или телефон');
+    if(p.length){ qerr.textContent = 'Чтобы сформировать сообщение, ' + p.join(' и ') + '.'; qerr.hidden = false; return; }
+    qerr.hidden = true;
+    document.getElementById('q-outText').textContent =
+      'Вопрос по расширению «Учет услуг НКО»\n' + (name ? 'От: ' + name + '\n' : '') + 'Контакт: ' + c + '\n\n' + q;
+    document.getElementById('q-copy').textContent = 'Скопировать';
+    document.getElementById('q-out').hidden = false;
+  });
+  document.getElementById('q-copy').addEventListener('click', function(){ copyFrom(this, document.getElementById('q-outText')); });
+})();
+</script>
