@@ -54,5 +54,7 @@ EOF
 } > "$OUT/index.html"
 
 touch "$OUT/.nojekyll"
+# Свой домен для GitHub Pages. Сборка стирает docs/, поэтому файл создается здесь.
+echo "nkoplan.ru" > "$OUT/CNAME"
 echo "Готово: $OUT/index.html"
 du -sh "$OUT"
